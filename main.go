@@ -140,6 +140,12 @@ func (state *TypeAndSeek) createKeyOrder(f *os.File) {
 		arr[i], arr[j] = arr[j], arr[i]
 	}
 
+	if state.mode == LengthMode {
+		if len(arr) > state.length {
+			arr = arr[:state.length]
+		}
+	}
+
 	state.symbols = arr
 }
 
@@ -163,9 +169,7 @@ func (state *TypeAndSeek) runExampleInput() {
 
 	fmt.Println("")
 
-	if state.mode == TimeMode {
-		state.startGame()
-	}
+	state.startGame()
 }
 
 func main() {
@@ -181,4 +185,8 @@ func main() {
 	defer input.Close()
 
 	state.createKeyOrder(input)
+
+	fmt.Println("")
+
+	state.startGame()
 }
