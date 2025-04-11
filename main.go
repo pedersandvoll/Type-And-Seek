@@ -3,10 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
-	"sync"
+	"time"
 
 	"github.com/eiannone/keyboard"
 )
@@ -19,11 +20,12 @@ const (
 )
 
 type TypeAndSeek struct {
-	mode    applicationMode
-	length  int
-	time    int
-	symbols []string
-	mu      sync.Mutex
+	mode         applicationMode
+	length       int
+	time         int
+	symbols      []string
+	symbolsTyped int
+	timeTaken    int
 }
 
 func printHelp() {
@@ -78,13 +80,61 @@ func createApplicationState() *TypeAndSeek {
 		fmt.Println("No command provided. Running the type and seek for \033[32;1m15\033[0m rounds.")
 	}
 
+	ts.symbolsTyped = 0
+
 	fmt.Println("")
 
 	return ts
 }
 
+func (state *TypeAndSeek) ticker(startTime time.Time, done chan bool, ticker *time.Ticker) {
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				elapsed := time.Since(startTime)
+				elapsedSeconds := math.Round(elapsed.Seconds())
+				state.timeTaken = int(elapsedSeconds)
+
+				if state.mode == TimeMode {
+					if int(elapsedSeconds) < state.time {
+						fmt.Printf("\033[1;0H\rTime: %.0f / %d seconds\n", elapsedSeconds, state.time)
+					} else {
+						fmt.Print("\033[H\033[2J")
+						fmt.Println("\033[1;0H\rTime's up!")
+						fmt.Printf("\033[2;0H\rSymbols typed: %d\n", state.symbolsTyped)
+						done <- true
+						return
+					}
+				} else {
+					fmt.Printf("\033[1;0H\rTime: %s\n", elapsed.Round(time.Second).String())
+				}
+			}
+		}
+	}()
+}
+
+func insert(slice []string, index int, value string) []string {
+	slice = append(slice, value)
+	copy(slice[index+1:], slice[index:])
+	slice[index] = value
+	return slice
+}
+
 func (state *TypeAndSeek) startGame() {
 	fmt.Print("\033[H\033[2J")
+	startTime := time.Now()
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	done := make(chan bool)
+	defer close(done)
+
+	state.ticker(startTime, done, ticker)
+
 	fmt.Printf("\033[2;0H\rMatch this symbol: %s\n", state.symbols[0])
 	if err := keyboard.Open(); err != nil {
 		panic(err)
@@ -92,29 +142,55 @@ func (state *TypeAndSeek) startGame() {
 	defer func() {
 		_ = keyboard.Close()
 	}()
-	for {
-		char, key, err := keyboard.GetKey()
-		if err != nil {
-			panic(err)
+
+	keyChan := make(chan keyboard.Key)
+	charChan := make(chan rune)
+	errChan := make(chan error)
+
+	go func() {
+		for {
+			char, key, err := keyboard.GetKey()
+			if err != nil {
+				errChan <- err
+				return
+			}
+			charChan <- char
+			keyChan <- key
 		}
-		if string(char) == state.symbols[0] {
-			state.symbols = state.symbols[1:]
-			if len(state.symbols) > 0 {
-				fmt.Print("\033[H\033[2J")
-				fmt.Printf("\033[2;0H\rMatch this symbol: %s\n", state.symbols[0])
-			} else {
-				fmt.Print("\033[H\033[2J")
-				fmt.Println("\033[2;0H\rAll symbols matched! Game completed.")
-				break
+	}()
+
+gameLoop:
+	for {
+		select {
+		case <-done:
+			break gameLoop
+		case err := <-errChan:
+			panic(err)
+		case char := <-charChan:
+			if string(char) == state.symbols[0] {
+				if state.mode == TimeMode {
+					randomIndex := rand.Intn(len(state.symbols))
+					state.symbols = insert(state.symbols, randomIndex, state.symbols[0])
+				}
+				state.symbols = state.symbols[1:]
+				state.symbolsTyped = state.symbolsTyped + 1
+				if len(state.symbols) > 0 {
+					fmt.Printf("\033[2;0H\rMatch this symbol: %s\n", state.symbols[0])
+				} else {
+					fmt.Print("\033[H\033[2J")
+					fmt.Println("\033[1;0H\rAll symbols typed!")
+					fmt.Printf("\033[2;0H\rTime taken: %d\n", state.timeTaken)
+					break gameLoop
+				}
+			}
+		case key := <-keyChan:
+			if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC {
+				break gameLoop
 			}
 		}
-		if key == keyboard.KeyEsc {
-			continue
-		}
-		if key == keyboard.KeyCtrlC {
-			break
-		}
 	}
+	fmt.Println("\033[3;0H\rExiting Game...")
+	os.Exit(0)
 }
 
 func (state *TypeAndSeek) createKeyOrder(f *os.File) {
