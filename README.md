@@ -14,19 +14,20 @@ Type And Seek is a minimalist typing game that challenges you to match a series 
 ### Prerequisites
 
 - Go (1.16 or later recommended)
+- Terminal with ANSI color support
 - The [github.com/eiannone/keyboard](https://github.com/eiannone/keyboard) package
 
 ### Installing
 
 1. Clone this repository
 ```
-git clone https://github.com/yourusername/type-and-seek.git
+git clone https://github.com/pedersandvoll/Type-And-Seek.git
 cd type-and-seek
 ```
 
 2. Install dependencies
 ```
-go get github.com/eiannone/keyboard
+go mod tidy
 ```
 
 3. Build the program
@@ -78,12 +79,12 @@ j
 ## Controls
 
 - Type the displayed symbol to progress
-- Press `ESC` to skip the current symbol (not implemented in the current version)
-- Press `Ctrl+C` to exit the game
+- Press `Esc` or `Ctrl+C` to exit the game
 
 ## Features
 
 - Two game modes: Length Mode and Time Mode
+- Performance tracking (time taken in Length Mode, symbols typed in Time Mode)
 - Colorful terminal output for better visibility
 - Randomized symbol order for varied gameplay
 - Support for custom symbol sets
