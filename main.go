@@ -49,13 +49,9 @@ func createApplicationState() *TypeAndSeek {
 				length, err := strconv.Atoi(os.Args[2])
 				if err != nil {
 					ts.length = 15
-					fmt.Println("Invalid argument for --length. Please provide a number.")
 				} else {
 					ts.length = length
-					fmt.Printf("Setting the number of words to type and seek to \033[32;1m%d\033[0m.\n", length)
 				}
-			} else {
-				fmt.Println("No argument provided for --length. Defaulting to \033[32;1m15\033[0m rounds.")
 			}
 		case "--time":
 			ts.mode = TimeMode
@@ -63,26 +59,20 @@ func createApplicationState() *TypeAndSeek {
 				time, err := strconv.Atoi(os.Args[2])
 				if err != nil {
 					ts.time = 15
-					fmt.Println("Invalid argument for --time. Please provide a number.")
 				} else {
 					ts.time = time
-					fmt.Printf("Setting the time amount to type and seek to \033[32;1m%d\033[0m seconds.\n", time)
 				}
-			} else {
-				fmt.Println("No argument provided for --time. Defaulting to \033[32;1m15\033[0m seconds.")
 			}
 		default:
 			fmt.Printf("Unknown command: \033[31;1m%s\033[0m. Type \033[32;1m--help\033[0m for assistance.\n", os.Args[1])
+			os.Exit(1)
 		}
 	} else {
 		ts.mode = LengthMode
 		ts.length = 15
-		fmt.Println("No command provided. Running the type and seek for \033[32;1m15\033[0m rounds.")
 	}
 
 	ts.symbolsTyped = 0
-
-	fmt.Println("")
 
 	return ts
 }
@@ -243,8 +233,6 @@ func (state *TypeAndSeek) runExampleInput() {
 
 	state.createKeyOrder(exampleInput)
 
-	fmt.Println("")
-
 	state.startGame()
 }
 
@@ -253,8 +241,6 @@ func main() {
 
 	input, err := openFile("input.txt")
 	if err != nil {
-		fmt.Println("No \033[31;1minput.txt\033[0m file found. Please create an \033[32;1minput.txt\033[0m file and add your own keys to 'Type And Seek'.")
-		fmt.Println("Trying \033[32;1mexample-input.txt\033[0m instead...")
 		state.runExampleInput()
 		return
 	}
