@@ -90,11 +90,13 @@ func (state *TypeAndSeek) ticker(startTime time.Time, done chan bool, ticker *ti
 
 				if state.mode == TimeMode {
 					if int(elapsedSeconds) < state.time {
-						fmt.Printf("\033[1;0H\rTime: %.0f / %d seconds\n", elapsedSeconds, state.time)
+						fmt.Printf("\033[1;0H\rTime: %.0f \033[90m/ %d seconds\033[0m\n", elapsedSeconds, state.time)
 					} else {
 						fmt.Print("\033[H\033[2J")
-						fmt.Println("\033[1;0H\rTime's up!")
-						fmt.Printf("\033[2;0H\rSymbols typed: %d\n", state.symbolsTyped)
+						fmt.Println("\033[1;0H\r")
+						fmt.Println("\033[1;0H\r\033[1;31mTime's up!\033[0m")
+						fmt.Printf("\033[3;0H\r\033[1;33mSymbols typed:\033[0m \033[1;93m%d\033[0m\n", state.symbolsTyped)
+						fmt.Println("\033[4;0H\r")
 						done <- true
 						return
 					}
@@ -104,6 +106,15 @@ func (state *TypeAndSeek) ticker(startTime time.Time, done chan bool, ticker *ti
 			}
 		}
 	}()
+}
+
+func (state *TypeAndSeek) displaySymbols() {
+	nextSymbol := ""
+	if len(state.symbols) > 1 {
+		nextSymbol = state.symbols[1]
+	}
+	fmt.Printf("\033[2;0H\rMatch this symbol: \033[96m%s\033[0m\nnext: \033[90m%s\033[0m\n",
+		state.symbols[0], nextSymbol)
 }
 
 func insert(slice []string, index int, value string) []string {
@@ -125,7 +136,7 @@ func (state *TypeAndSeek) startGame() {
 
 	state.ticker(startTime, done, ticker)
 
-	fmt.Printf("\033[2;0H\rMatch this symbol: %s\n", state.symbols[0])
+	state.displaySymbols()
 	if err := keyboard.Open(); err != nil {
 		panic(err)
 	}
@@ -165,11 +176,13 @@ gameLoop:
 				state.symbols = state.symbols[1:]
 				state.symbolsTyped = state.symbolsTyped + 1
 				if len(state.symbols) > 0 {
-					fmt.Printf("\033[2;0H\rMatch this symbol: %s\n", state.symbols[0])
+					state.displaySymbols()
 				} else {
-					fmt.Print("\033[H\033[2J")
-					fmt.Println("\033[1;0H\rAll symbols typed!")
-					fmt.Printf("\033[2;0H\rTime taken: %d\n", state.timeTaken)
+					fmt.Println("\033[H\033[2J")
+					fmt.Println("\033[1;0H\r")
+					fmt.Println("\033[1;0H\r\033[1;32mAll symbols typed successfully!\033[0m")
+					fmt.Printf("\033[3;0H\r\033[1;33mTotal time taken:\033[0m \033[1;93m%d s\033[0m\n", state.timeTaken)
+					fmt.Println("\033[4;0H\r")
 					break gameLoop
 				}
 			}
@@ -179,7 +192,7 @@ gameLoop:
 			}
 		}
 	}
-	fmt.Println("\033[3;0H\rExiting Game...")
+	fmt.Println("\033[5;0H\r\033[1m\033[90mExiting Game...\033[0m")
 	os.Exit(0)
 }
 
